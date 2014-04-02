@@ -1,0 +1,10 @@
+{
+	"name": "backbone.input.motion",
+	"version": "0.1.0",
+	"main": ["./build/backbone.input.motion-min.js"],
+	"dependencies": {
+		"backbone" : ">=0.9.10",
+		"underscore" : ">=1.4.4",
+		"jquery" : ">=2.0.3"
+	}
+}
