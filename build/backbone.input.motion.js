@@ -2,7 +2,7 @@
  * @name backbone.input.motion
  * Motion event bindings for Backbone views
  *
- * Version: 0.1.0 (Sun, 13 Apr 2014 10:33:04 GMT)
+ * Version: 0.1.0 (Sun, 13 Apr 2014 22:34:21 GMT)
  * Homepage: https://github.com/backbone-input/motion
  *
  * @author makesites
@@ -12,7 +12,7 @@
  * @license MIT license
  */
 
-(function(w, _, Backbone, APP) {
+(function(w, d, _, Backbone, APP) {
 
 	// support for Backbone APP() view if available...
 	var isAPP = ( typeof APP !== "undefined" && typeof APP.View !== "undefined" );
@@ -32,9 +32,9 @@ params.set({
 	var Motion = View.extend({
 
 		options: {
-			monitor: View.prototype.options.monitor || [], // add "motion" to initiate monitoring
+			monitor: [], // add "motion" to initiate monitoring
 			motion: {
-				states: ["accelerometer"] // limit the monitored actions by defining a subset
+				states: ["accelerometer", "rift"] // limit the monitored actions by defining a subset
 			}
 		},
 
@@ -80,10 +80,24 @@ params.set({
 					}, true);
 				}
 			}
+			if( _.inArray("rift", states) ){
+				c.script("//rawgit.com/Instrument/oculus-bridge/master/web/build/OculusBridge.min.js");
+				// allow the script to load (use callback instead...)
+				setTimeout(function(){
+					var bridge = new OculusBridge({
+						"onOrientationUpdate" : function(quatValues) { self._onOrientationUpdate( quatValues ); }
+					});
+					bridge.connect();
+				}, 1000);
+			}
 		},
 
 		// public
 		onMotionAccelerometer: function( data ){
+
+		},
+
+		onOrientationUpdate: function( data ){
 
 		},
 
@@ -93,10 +107,10 @@ params.set({
 			var monitor = _.inArray("motion", this.options.monitor) && _.inArray("accelerometer", this.options.motion.states);
 			if( !monitor ) return;
 			//if (e.stopPropagation) e.stopPropagation();
-			if( _.inDebug() ) console.log("motion detected", e);
+			if( _.inDebug() ) console.log(" accelerometer motion detected", data);
 			// save data
 			this.params.set({
-				motion : {
+				accelerometer : {
 					x : data[0],
 					y : data[1],
 					z : data[2]
@@ -104,6 +118,20 @@ params.set({
 			});
 			this.trigger("accelerometer", data);
 			this.onMotionAccelerometer( data );
+		},
+
+		_onOrientationUpdate: function( data ){
+			// prerequisite
+			var monitor = _.inArray("motion", this.options.monitor) && _.inArray("rift", this.options.motion.states);
+			if( !monitor ) return;
+			//if (e.stopPropagation) e.stopPropagation();
+			if( _.inDebug() ) console.log("rift motion detected", data);
+			// save data (quad values)
+			this.params.set({
+				rift : data
+			});
+			this.trigger("rift", data);
+			this.onOrientationUpdate( data );
 		}
 
 	});
@@ -134,6 +162,34 @@ params.set({
 		}
 	});
 
+	// script loader
+	// taken from: https://github.com/commons/common.js/blob/master/lib/c.script.js
+	var c = w.c || {};
+	c.script = c.script || function( url, attr ){
+
+		//fallbacks
+		attr = attr || {};
+		url = url || false;
+		attr.id = attr.id || false;
+		attr.async = attr.async || false;
+		// prerequisites
+		if( !url ) return;
+		if( attr.id && d.getElementById(attr.id) ) return;
+		// variables
+		var t = "script";
+		var js = d.createElement(t);
+		// clean url from protocol definition
+		url = url.replace(/^http:|^https:/, "");
+		// set attributes
+		js.type = 'text/javascript';
+		if( attr.id ) js.id = attr.id;
+		js.async = attr.async;
+		js.src = ("https:"==location.protocol?"https:":"http:")+ url;
+		// place in DOM
+		var s = d.getElementsByTagName(t)[0];
+		s.parentNode.insertBefore(js, s);
+
+	};
 
 
 	// Support module loaders
@@ -165,4 +221,4 @@ params.set({
 	}
 
 
-})(this.window, this._, this.Backbone, this.APP);
+})(this.window, this.document, this._, this.Backbone, this.APP);
