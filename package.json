@@ -1,6 +1,6 @@
 {
 	"name": "backbone.input.motion",
-	"version": "0.1.0",
+	"version": "0.2.1",
 	"author": "makesites",
 	"description": "Motion event bindings for Backbone views",
 	"homepage": "https://github.com/backbone-input/motion",

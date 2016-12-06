@@ -2,7 +2,7 @@
  * @name backbone.input.motion
  * Motion event bindings for Backbone views
  *
- * Version: 0.1.0 (Sun, 13 Apr 2014 22:34:21 GMT)
+ * Version: 0.2.1 (Tue, 06 Dec 2016 11:35:42 GMT)
  * Homepage: https://github.com/backbone-input/motion
  *
  * @author makesites
@@ -29,6 +29,14 @@ params.set({
 });
 
 
+// extend existing params
+var state = View.prototype.params || new Backbone.Model();
+
+// defaults
+state.set({
+});
+
+
 	var Motion = View.extend({
 
 		options: {
@@ -40,8 +48,7 @@ params.set({
 
 		params: params,
 
-		state : {
-		},
+		state : state.clone(),
 /*
 		events: _.extend({}, View.prototype.events, {
 
@@ -135,7 +142,6 @@ params.set({
 		}
 
 	});
-
 
 
 	// Helpers
