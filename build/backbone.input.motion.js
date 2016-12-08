@@ -2,21 +2,40 @@
  * @name backbone.input.motion
  * Motion event bindings for Backbone views
  *
- * Version: 0.2.1 (Tue, 06 Dec 2016 11:35:42 GMT)
+ * Version: 0.3.0 (Thu, 08 Dec 2016 11:34:46 GMT)
  * Homepage: https://github.com/backbone-input/motion
  *
  * @author makesites
- * Initiated by: Makis Tracend (@tracend)
+ * Initiated by Makis Tracend (@tracend)
  *
  * @cc_on Copyright © Makesites.org
  * @license MIT license
  */
 
-(function(w, d, _, Backbone, APP) {
+(function (lib) {
+
+	//"use strict";
+
+	// Support module loaders
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define('backbone.input.motion', ['jquery', 'underscore', 'backbone'], lib);
+	} else if ( typeof module === "object" && module && typeof module.exports === "object" ){
+		// Expose as module.exports in loaders that implement CommonJS module pattern.
+		module.exports = lib;
+	} else {
+		// Browser globals
+		// - getting the available query lib
+		var $ = window.jQuery || window.Zepto || window.vQuery;
+		lib($, window._, window.Backbone);
+	}
+
+}(function ($, _, Backbone) {
 
 	// support for Backbone APP() view if available...
-	var isAPP = ( typeof APP !== "undefined" && typeof APP.View !== "undefined" );
-	var View = ( isAPP ) ? APP.View : Backbone.View;
+	var APP = APP || window.APP || null;
+	var isAPP = ( APP !== null );
+	var View = ( isAPP && typeof APP.View !== "undefined" ) ? APP.View : Backbone.View;
 
 
 
@@ -46,7 +65,7 @@ state.set({
 			}
 		},
 
-		params: params,
+		params: params.clone(),
 
 		state : state.clone(),
 /*
@@ -56,16 +75,35 @@ state.set({
 */
 		//
 		initialize: function( options ){
-
-			var monitor = _.inArray("motion", this.options.monitor);
+			// fallbacks
+			options = options || {};
+			// extending options
+			this.options = _.extend({}, this.options, options );
+			// check monitor options
+			var monitor = this.options.monitorMotion || _.inArray("motion", this.options.monitor);
 			if( monitor ){
-				this._monitorMotion();
+				this.monitorMotion();
 			}
 
 			return View.prototype.initialize.call( this, options );
 		},
 
-		_monitorMotion: function(){
+		monitorMotion: function(){
+			// fallback
+			if(typeof state == "undefined") state = true;
+
+			if( state ){
+				this._monitorMotionOn();
+				// broadcast event
+				this.trigger('monitor-motion-on');
+			} else {
+				this._monitorMotionOff();
+				// broadcast event
+				this.trigger('monitor-motion-off');
+			}
+		},
+
+		_monitorMotionOn: function(){
 			// prerequisite
 			if( !this.el ) return;
 			// variables
@@ -96,6 +134,28 @@ state.set({
 					});
 					bridge.connect();
 				}, 1000);
+			}
+		},
+
+		_monitorMotionOff: function(){
+
+			if( _.inArray("accelerometer", states) ){
+				if (window.DeviceOrientationEvent) {
+					window.removeEventListener("deviceorientation", function ( event ) {
+						self._onMotionAccelerometer([event.alpha, event.beta, event.gamma]);
+					}, true);
+				} else if (window.DeviceMotionEvent) {
+					window.removeEventListener('devicemotion', function ( event ) {
+						self._onMotionAccelerometer([event.acceleration.x * 2, event.acceleration.y * 2, event.acceleration.z * 2 ]);
+					}, true);
+				} else {
+					window.removeEventListener("MozOrientation", function ( event ) {
+						self._onMotionAccelerometer([event.orientation.x * 50, event.orientation.y * 50, event.orientation.z * 50]);
+					}, true);
+				}
+			}
+			if( _.inArray("rift", states) ){
+				bridge.disconnect();
 			}
 		},
 
@@ -170,7 +230,7 @@ state.set({
 
 	// script loader
 	// taken from: https://github.com/commons/common.js/blob/master/lib/c.script.js
-	var c = w.c || {};
+	var c = c || window.c || {};
 	c.script = c.script || function( url, attr ){
 
 		//fallbacks
@@ -198,33 +258,26 @@ state.set({
 	};
 
 
-	// Support module loaders
-	if ( typeof module === "object" && module && typeof module.exports === "object" ) {
-		// Expose as module.exports in loaders that implement CommonJS module pattern.
-		module.exports = Motion;
-	} else {
-		// Register as a named AMD module, used in Require.js
-		if ( typeof define === "function" && define.amd ) {
-			define( [], function () { return Motion; } );
-		}
+
+	// update Backbone namespace regardless
+	Backbone.Input = Backbone.Input ||{};
+	Backbone.Input.Motion = Motion;
+	// update APP namespace
+	if( isAPP ){
+		APP.Input = APP.Input || {};
+		APP.Input.Motion = Motion;
 	}
+
 	// If there is a window object, that at least has a document property
-	if ( typeof window === "object" && typeof window.document === "object" ) {
+	if( typeof window === "object" && typeof window.document === "object" ){
+		window.Backbone = Backbone;
 		// update APP namespace
 		if( isAPP ){
-			APP.View = Motion;
-			APP.Input = APP.Input || {};
-			APP.Input.Motion = Motion;
-			// save namespace
 			window.APP = APP;
 		}
-		// update Backbone namespace either way
-		Backbone.View = Motion;
-		Backbone.Input = Backbone.Input || {};
-		Backbone.Input.Motion = Motion;
-		// save Backbone namespace
-		window.Backbone = Backbone;
 	}
 
+	// Support module loaders
+	return Motion;
 
-})(this.window, this.document, this._, this.Backbone, this.APP);
+}));
