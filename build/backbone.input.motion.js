@@ -2,7 +2,7 @@
  * @name backbone.input.motion
  * Motion event bindings for Backbone views
  *
- * Version: 0.3.0 (Thu, 08 Dec 2016 11:34:46 GMT)
+ * Version: 0.3.1 (Tue, 13 Dec 2016 00:13:45 GMT)
  * Homepage: https://github.com/backbone-input/motion
  *
  * @author makesites
@@ -61,7 +61,7 @@ state.set({
 		options: {
 			monitor: [], // add "motion" to initiate monitoring
 			motion: {
-				states: ["accelerometer", "rift"] // limit the monitored actions by defining a subset
+				states: ["accelerometer", "rift"] // available options - enabled by updating this.state
 			}
 		},
 
@@ -108,7 +108,7 @@ state.set({
 			if( !this.el ) return;
 			// variables
 			var self = this;
-			var states = this.options.motion.states;
+			var states = this.options.motion.states || [];
 
 			if( _.inArray("accelerometer", states) ){
 				if (window.DeviceOrientationEvent) {
@@ -129,16 +129,20 @@ state.set({
 				c.script("//rawgit.com/Instrument/oculus-bridge/master/web/build/OculusBridge.min.js");
 				// allow the script to load (use callback instead...)
 				setTimeout(function(){
-					var bridge = new OculusBridge({
+					self._OculusBridge = new OculusBridge({
 						"onOrientationUpdate" : function(quatValues) { self._onOrientationUpdate( quatValues ); }
 					});
-					bridge.connect();
+					self._OculusBridge.connect();
 				}, 1000);
 			}
+			// update state 
+			this.state.set('motion', states);
 		},
 
 		_monitorMotionOff: function(){
 
+			var states = this.state.get('motion') || [];
+			
 			if( _.inArray("accelerometer", states) ){
 				if (window.DeviceOrientationEvent) {
 					window.removeEventListener("deviceorientation", function ( event ) {
@@ -155,8 +159,10 @@ state.set({
 				}
 			}
 			if( _.inArray("rift", states) ){
-				bridge.disconnect();
+				if( this._OculusBridge ) this._OculusBridge.disconnect();
 			}
+			// remove state 
+			this.state.set('motion', false);
 		},
 
 		// public
@@ -231,6 +237,7 @@ state.set({
 	// script loader
 	// taken from: https://github.com/commons/common.js/blob/master/lib/c.script.js
 	var c = c || window.c || {};
+	var d = document || {};
 	c.script = c.script || function( url, attr ){
 
 		//fallbacks
